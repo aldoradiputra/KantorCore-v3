@@ -200,7 +200,11 @@ importers:
 
   packages/ai: {}
 
-  packages/audit: {}
+  packages/audit:
+    dependencies:
+      postgres:
+        specifier: 3.4.9
+        version: 3.4.9
 
   packages/auth: {}
 
@@ -230,7 +234,11 @@ importers:
 
   packages/docgen: {}
 
-  packages/events: {}
+  packages/events:
+    dependencies:
+      postgres:
+        specifier: 3.4.9
+        version: 3.4.9
 
   packages/governed: {}
 
