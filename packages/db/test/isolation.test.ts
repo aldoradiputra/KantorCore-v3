@@ -9,6 +9,9 @@ import { withTenant } from "../src/tenant.ts";
 import { applyMigrations } from "../src/migrate.ts";
 import { emit } from "@kantorcore/events";
 import { writeAudit } from "@kantorcore/audit";
+import { makeAuth, createNonHumanIdentity, grantNhi } from "@kantorcore/auth";
+import { can } from "@kantorcore/access";
+import pg from "pg";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -174,6 +177,75 @@ describe("append-only audit log", () => {
           tx`update tenant.audit_log set action = 'tamper'`,
         ),
       ).rejects.toThrow();
+    } finally {
+      await sql.end();
+    }
+  });
+});
+
+describe("authentication (Better Auth)", () => {
+  it("signs up a global user against the platform schema", async () => {
+    const { Pool } = pg;
+    const pool = new Pool({
+      connectionString: tenantUrl,
+      options: "-c search_path=platform",
+    });
+    try {
+      const auth = makeAuth({
+        pool,
+        secret: "test-secret-0123456789abcdef0123456789abcd",
+        baseURL: "http://localhost:3000",
+      });
+      const email = `andi-${Date.now()}@example.com`;
+      const res = await auth.api.signUpEmail({
+        body: { email, password: "sup3rsecret!", name: "Andi" },
+      });
+      expect(res?.user?.email).toBe(email);
+    } finally {
+      await pool.end();
+    }
+  });
+});
+
+describe("authorization (can)", () => {
+  it("grants by membership role; denies outside the tenant", async () => {
+    const sql = postgres(tenantUrl, { prepare: false });
+    try {
+      const org = `org-${Date.now()}`;
+      const admin = `user-admin-${Date.now()}`;
+      const memberU = `user-member-${Date.now()}`;
+      await sql`insert into platform.organization (id, name, slug) values (${org}, 'Tenant', ${org})`;
+      await sql`insert into platform."user" (id, name, email) values
+        (${admin}, 'Admin', ${`${admin}@ex.com`}),
+        (${memberU}, 'Member', ${`${memberU}@ex.com`})`;
+      await sql`insert into platform.member (id, "organizationId", "userId", role) values
+        (${`m-${admin}`}, ${org}, ${admin}, 'admin'),
+        (${`m-${memberU}`}, ${org}, ${memberU}, 'member')`;
+
+      const A = { kind: "user", id: admin } as const;
+      const M = { kind: "user", id: memberU } as const;
+      expect(await can(sql, A, "org.manage", { tenantId: org })).toBe(true);
+      expect(await can(sql, M, "record.create", { tenantId: org })).toBe(true);
+      expect(await can(sql, M, "org.manage", { tenantId: org })).toBe(false);
+      expect(await can(sql, A, "record.read", { tenantId: "other-tenant" })).toBe(false);
+    } finally {
+      await sql.end();
+    }
+  });
+
+  it("keeps a non-human identity inert until granted (ARCH §5)", async () => {
+    const sql = postgres(tenantUrl, { prepare: false });
+    try {
+      const org = `org-nhi-${Date.now()}`;
+      await sql`insert into platform.organization (id, name, slug) values (${org}, 'Tenant', ${org})`;
+
+      const nhi = await createNonHumanIdentity(sql, { label: "AR Collector" });
+      const P = { kind: "nhi", id: nhi.id } as const;
+
+      expect(await can(sql, P, "record.read", { tenantId: org })).toBe(false);
+      await grantNhi(sql, { nhiId: nhi.id, tenantId: org, role: "member" });
+      expect(await can(sql, P, "record.read", { tenantId: org })).toBe(true);
+      expect(await can(sql, P, "org.manage", { tenantId: org })).toBe(false);
     } finally {
       await sql.end();
     }

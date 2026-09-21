@@ -22,7 +22,13 @@
     "postgres": "3.4.9"
   },
   "devDependencies": {
+    "@kantorcore/access": "workspace:*",
+    "@kantorcore/audit": "workspace:*",
+    "@kantorcore/auth": "workspace:*",
+    "@kantorcore/events": "workspace:*",
     "@testcontainers/postgresql": "12.1.0",
+    "@types/pg": "8.23.1",
+    "pg": "8.23.0",
     "vitest": "5.0.1"
   }
 }

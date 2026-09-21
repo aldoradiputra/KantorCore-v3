@@ -13,7 +13,7 @@
     "typecheck": "turbo run typecheck",
     "lint": "eslint apps packages",
     "test": "turbo run test",
-    "test:isolation": "pnpm --filter @kantorcore/db test:integration",
+    "test:isolation": "pnpm build && pnpm --filter @kantorcore/db test:integration",
     "db:migrate": "pnpm --filter @kantorcore/db migrate"
   },
   "devDependencies": {
