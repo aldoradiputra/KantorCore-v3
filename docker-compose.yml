@@ -1,0 +1,23 @@
+# Local development database (ARCH §20). Not for production — production Postgres
+# is self-managed on Biznet with pgBackRest (D49, A3/A5 infra).
+services:
+  postgres:
+    image: pgvector/pgvector:pg18
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: kantorcore
+    ports:
+      - "5432:5432"
+    volumes:
+      # Bootstrap runs once on first init as the superuser (roles/schemas/extensions).
+      - ./packages/db/sql/bootstrap.sql:/docker-entrypoint-initdb.d/00-bootstrap.sql:ro
+      - kc_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d kantorcore"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  kc_pgdata:

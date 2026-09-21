@@ -142,9 +142,16 @@ jobs:
           corepack enable
           corepack prepare "pnpm@${PNPM_VERSION}" --activate
       - run: pnpm install --frozen-lockfile
-      - run: pnpm db:migrate
+      - name: Migrate staging (skips until STAGING_DATABASE_URL exists)
+        shell: bash
         env:
           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "No STAGING_DATABASE_URL yet (A3/A5 infra pending) — skipping migrate."
+            exit 0
+          fi
+          pnpm db:migrate
 
   deploy:
     name: deploy (staging, Coolify)
