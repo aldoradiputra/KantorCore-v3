@@ -160,7 +160,16 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment: staging
     steps:
-      - name: Trigger Coolify staging deploy
+      - name: Trigger Coolify staging deploy (skips until the webhook exists)
         shell: bash
+        env:
+          COOLIFY_WEBHOOK_URL: ${{ secrets.COOLIFY_WEBHOOK_URL }}
+          COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
         run: |
-          echo "Staging deploy is handled by Coolify (A3). Placeholder until the webhook lands."
+          if [ -z "$COOLIFY_WEBHOOK_URL" ]; then
+            echo "No COOLIFY_WEBHOOK_URL yet (A3 infra pending) — skipping deploy."
+            exit 0
+          fi
+          curl -fsSL -X POST "$COOLIFY_WEBHOOK_URL" \
+            -H "Authorization: Bearer ${COOLIFY_API_TOKEN}"
+          echo "Triggered Coolify staging deploy."

@@ -1,0 +1,7 @@
+; Copy to userlist.txt (gitignored) and fill real SCRAM verifiers or passwords.
+; Generate a SCRAM verifier per role from Postgres:
+;   SELECT rolname, rolpassword FROM pg_authid WHERE rolname LIKE 'kc_%';
+; or set a password and copy the "SCRAM-SHA-256$..." string. Format: "user" "verifier"
+"kc_tenant"  "SCRAM-SHA-256$..."
+"kc_control" "SCRAM-SHA-256$..."
+"kc_migrator" "SCRAM-SHA-256$..."

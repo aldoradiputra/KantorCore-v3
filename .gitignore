@@ -12,6 +12,7 @@ dist/
 .env
 .env.*
 !.env.example
+infra/**/userlist.txt
 
 # logs & coverage
 *.log
