@@ -26,8 +26,7 @@ Node 24, pnpm 12 (`corepack` or global). Enforced via `.node-version` and `engin
 pnpm install            # install workspace deps
 pnpm build              # turbo: build all packages
 pnpm typecheck          # turbo: type-check all packages
-pnpm lint               # turbo: lint all packages
-pnpm lint:boundaries    # import-boundary check across the whole tree (AGENTS.md Rule 8)
+pnpm lint               # eslint across apps + packages, incl. import boundaries (Rule 8)
 pnpm test               # turbo: run tests
 ```
 

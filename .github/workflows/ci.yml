@@ -61,9 +61,7 @@ jobs:
           corepack prepare "pnpm@${PNPM_VERSION}" --activate
       - name: Install (frozen lockfile)
         run: pnpm install --frozen-lockfile
-      - name: Import boundaries (Rule 8)
-        run: pnpm lint:boundaries
-      - name: Lint
+      - name: Lint (eslint + import boundaries, Rule 8)
         run: pnpm lint
       - name: Typecheck
         run: pnpm typecheck

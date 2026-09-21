@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "@kantorcore/web",
   "version": "0.0.0",
   "private": true,
@@ -13,8 +13,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "eslint src"
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@kantorcore/config": "workspace:*"
