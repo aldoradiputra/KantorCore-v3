@@ -1,3 +1,9 @@
 packages:
   - "apps/*"
   - "packages/*"
+# Native build scripts from testcontainers' docker client. Not needed for local
+# Docker (npipe/socket); declined per supply-chain policy (D54).
+allowBuilds:
+  cpu-features: false
+  protobufjs: false
+  ssh2: false

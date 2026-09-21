@@ -13,9 +13,8 @@
     "typecheck": "turbo run typecheck",
     "lint": "eslint apps packages",
     "test": "turbo run test",
-    "test:isolation": "node -e \"console.log('[stub] cross-tenant isolation suite lands in A9 (D46)')\"",
-    "db:generate": "node -e \"console.log('[stub] drizzle generate lands in A5')\"",
-    "db:migrate": "node -e \"console.log('[stub] migrations land in A5')\""
+    "test:isolation": "pnpm --filter @kantorcore/db test:integration",
+    "db:migrate": "pnpm --filter @kantorcore/db migrate"
   },
   "devDependencies": {
     "@types/node": "26.6.2",
