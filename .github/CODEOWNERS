@@ -1,0 +1,14 @@
+# Protected paths — the founder merges these (AGENTS.md). Branch protection should
+# require CODEOWNERS review on the default branch so a builder PR cannot self-merge them.
+
+# Governed core + platform spine
+/packages/db/         @aldoradiputra
+/packages/auth/       @aldoradiputra
+/packages/access/     @aldoradiputra
+/packages/tenancy/    @aldoradiputra
+/packages/billing/    @aldoradiputra
+/packages/governed/   @aldoradiputra
+
+# CI, infra, and anything under .github (workflows, this file)
+/.github/             @aldoradiputra
+/infra/               @aldoradiputra

@@ -1,0 +1,161 @@
+name: CI
+
+# D12 pipeline: typecheck -> build -> test -> isolation -> migrate -> deploy.
+# migrate/deploy are staging-only and stubbed until A3/A5 land; the stages exist and gate now.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least privilege by default (D54). Jobs opt into more only if they need it.
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "24.19.0"
+  PNPM_VERSION: "12.5.1"
+
+jobs:
+  # Rule 20 / D54: every third-party action must be pinned to a full commit SHA.
+  actions-pinned:
+    name: actions are SHA-pinned
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Assert all `uses:` refs are 40-char SHAs
+        shell: bash
+        run: |
+          fail=0
+          while IFS= read -r line; do
+            ref=$(printf '%s' "$line" | sed -E 's/.*uses:[[:space:]]*//; s/[[:space:]]*#.*//; s/["'"'"']//g')
+            case "$ref" in
+              ./*) continue ;;   # local composite actions are allowed
+            esac
+            sha=${ref##*@}
+            if ! printf '%s' "$sha" | grep -qE '^[0-9a-f]{40}$'; then
+              echo "::error::Unpinned action ref: $ref"
+              fail=1
+            fi
+          done < <(grep -rhE '^[[:space:]]*(-[[:space:]]*)?uses:' .github/workflows)
+          [ "$fail" -eq 0 ] && echo "All action refs are SHA-pinned."
+          exit $fail
+
+  verify:
+    name: typecheck · build · lint · boundaries
+    runs-on: ubuntu-latest
+    needs: actions-pinned
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Enable pnpm
+        shell: bash
+        run: |
+          corepack enable
+          corepack prepare "pnpm@${PNPM_VERSION}" --activate
+      - name: Install (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+      - name: Import boundaries (Rule 8)
+        run: pnpm lint:boundaries
+      - name: Lint
+        run: pnpm lint
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Build
+        run: pnpm build
+
+  test:
+    name: unit tests
+    runs-on: ubuntu-latest
+    needs: verify
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Enable pnpm
+        shell: bash
+        run: |
+          corepack enable
+          corepack prepare "pnpm@${PNPM_VERSION}" --activate
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+
+  # D46: the cross-tenant isolation suite blocks merges. Real suite arrives in A9;
+  # the gate exists now and sits before migrate/deploy.
+  isolation:
+    name: cross-tenant isolation (blocks merge)
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Enable pnpm
+        shell: bash
+        run: |
+          corepack enable
+          corepack prepare "pnpm@${PNPM_VERSION}" --activate
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:isolation
+
+  # Dependency scanning in CI (D54). Non-blocking until we triage the baseline.
+  audit:
+    name: dependency audit
+    runs-on: ubuntu-latest
+    needs: actions-pinned
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Enable pnpm
+        shell: bash
+        run: |
+          corepack enable
+          corepack prepare "pnpm@${PNPM_VERSION}" --activate
+      - run: pnpm install --frozen-lockfile
+      - name: pnpm audit (advisory)
+        run: pnpm audit --prod || true
+
+  # Staging only, and only on push to main — PR builds never see secrets (D54, ARCH §18).
+  # Stub until A5 (migrations) and A3 (Coolify) land.
+  migrate:
+    name: db migrate (staging)
+    runs-on: ubuntu-latest
+    needs: isolation
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: staging
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Enable pnpm
+        shell: bash
+        run: |
+          corepack enable
+          corepack prepare "pnpm@${PNPM_VERSION}" --activate
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:migrate
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+
+  deploy:
+    name: deploy (staging, Coolify)
+    runs-on: ubuntu-latest
+    needs: migrate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: staging
+    steps:
+      - name: Trigger Coolify staging deploy
+        shell: bash
+        run: |
+          echo "Staging deploy is handled by Coolify (A3). Placeholder until the webhook lands."
