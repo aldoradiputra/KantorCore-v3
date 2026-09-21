@@ -1,0 +1,12 @@
+# Normalize line endings to LF in the repo (consistent across Windows/Linux CI).
+* text=auto eol=lf
+
+# Lockfile is generated; keep it LF and mark for less noisy diffs.
+pnpm-lock.yaml linguist-generated=true
+
+# Binaries
+*.woff2 binary
+*.png binary
+*.jpg binary
+*.ico binary
+*.svg text
