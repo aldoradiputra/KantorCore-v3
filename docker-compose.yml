@@ -12,7 +12,8 @@ services:
     volumes:
       # Bootstrap runs once on first init as the superuser (roles/schemas/extensions).
       - ./packages/db/sql/bootstrap.sql:/docker-entrypoint-initdb.d/00-bootstrap.sql:ro
-      - kc_pgdata:/var/lib/postgresql/data
+      # PG18 images store data under /var/lib/postgresql (not .../data).
+      - kc_pgdata:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d kantorcore"]
       interval: 5s

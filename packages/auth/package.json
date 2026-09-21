@@ -14,5 +14,13 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "better-auth": "1.7.5",
+    "pg": "8.23.0",
+    "postgres": "3.4.9"
+  },
+  "devDependencies": {
+    "@types/pg": "8.23.1"
   }
 }
