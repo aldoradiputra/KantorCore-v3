@@ -7,6 +7,7 @@ dist/
 .turbo/
 *.tsbuildinfo
 .next/
+next-env.d.ts
 
 # env & secrets (never commit — secrets live in Coolify, D54/ARCH §20)
 .env
