@@ -1,0 +1,69 @@
+# Observability (D52): GlitchTip (errors) + Uptime Kuma (uptime). Hosted in Indonesia
+# alongside the app; personal data scrubbed from payloads at the app boundary (ARCH §20).
+# Secrets come from .env (never committed).
+services:
+  glitchtip-postgres:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: glitchtip
+      POSTGRES_PASSWORD: ${GLITCHTIP_DB_PASSWORD:?set in .env}
+      POSTGRES_DB: glitchtip
+    volumes:
+      - glitchtip_pg:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U glitchtip -d glitchtip"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  glitchtip-redis:
+    image: valkey/valkey:8
+    restart: unless-stopped
+
+  glitchtip-web:
+    image: glitchtip/glitchtip:latest
+    restart: unless-stopped
+    depends_on:
+      glitchtip-postgres:
+        condition: service_healthy
+    environment: &glitchtip-env
+      DATABASE_URL: postgres://glitchtip:${GLITCHTIP_DB_PASSWORD}@glitchtip-postgres:5432/glitchtip
+      SECRET_KEY: ${GLITCHTIP_SECRET_KEY:?set in .env}
+      REDIS_URL: redis://glitchtip-redis:6379/0
+      PORT: "8080"
+      GLITCHTIP_DOMAIN: ${GLITCHTIP_DOMAIN:?set in .env}
+      DEFAULT_FROM_EMAIL: ${GLITCHTIP_FROM_EMAIL:-errors@localhost}
+      EMAIL_URL: ${GLITCHTIP_EMAIL_URL:-consolemail://}
+    ports:
+      - "8080:8080"
+
+  glitchtip-worker:
+    image: glitchtip/glitchtip:latest
+    restart: unless-stopped
+    command: ./bin/run-celery-with-beat.sh
+    depends_on:
+      - glitchtip-postgres
+      - glitchtip-redis
+    environment: *glitchtip-env
+
+  glitchtip-migrate:
+    image: glitchtip/glitchtip:latest
+    command: ./manage.py migrate
+    depends_on:
+      glitchtip-postgres:
+        condition: service_healthy
+    environment: *glitchtip-env
+    restart: "no"
+
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    restart: unless-stopped
+    volumes:
+      - uptime_kuma:/app/data
+    ports:
+      - "3001:3001"
+
+volumes:
+  glitchtip_pg:
+  uptime_kuma:

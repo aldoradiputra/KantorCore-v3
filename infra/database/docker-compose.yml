@@ -1,0 +1,42 @@
+# Production-style database stack: Postgres 18 + pgvector behind PgBouncer in
+# transaction mode (D5, D13, D49). Portable — runs on the laptop server now, moves to
+# a Biznet database server later unchanged. Secrets come from .env (never committed).
+#
+# NOTE (D49): the locked target is a self-managed Postgres on Biznet with pgBackRest.
+# The laptop is a temporary stand-in; this compose is written to lift-and-shift.
+services:
+  postgres:
+    image: pgvector/pgvector:pg18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_SUPERUSER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:?set in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-kantorcore}
+    volumes:
+      # Roles/schemas/extensions on first init (same bootstrap as dev).
+      - ../../packages/db/sql/bootstrap.sql:/docker-entrypoint-initdb.d/00-bootstrap.sql:ro
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_SUPERUSER:-postgres} -d ${POSTGRES_DB:-kantorcore}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    # Not published publicly: only PgBouncer and the app network reach it.
+    expose:
+      - "5432"
+
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
+      - ./pgbouncer/userlist.txt:/etc/pgbouncer/userlist.txt:ro
+    ports:
+      # App connects here (transaction pooling). postgres-js must use prepare:false.
+      - "6432:6432"
+
+volumes:
+  pgdata:
