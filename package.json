@@ -17,10 +17,10 @@
     "db:migrate": "pnpm --filter @kantorcore/db migrate"
   },
   "devDependencies": {
-    "@types/node": "26.6.2",
-    "eslint": "10.11.0",
-    "turbo": "2.11.2",
-    "typescript": "5.9.3",
-    "typescript-eslint": "8.70.0"
+    "@types/node": "26.6.4",
+    "eslint": "10.12.0",
+    "turbo": "2.11.7",
+    "typescript": "7.0.2",
+    "typescript-eslint": "8.71.0"
   }
 }
