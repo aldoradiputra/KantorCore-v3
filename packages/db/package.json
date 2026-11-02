@@ -18,17 +18,17 @@
     "migrate": "node --experimental-strip-types src/migrate.ts"
   },
   "dependencies": {
-    "drizzle-orm": "0.45.2",
-    "postgres": "3.4.9"
+    "drizzle-orm": "0.45.4",
+    "postgres": "4.0.0"
   },
   "devDependencies": {
     "@kantorcore/access": "workspace:*",
     "@kantorcore/audit": "workspace:*",
     "@kantorcore/auth": "workspace:*",
     "@kantorcore/events": "workspace:*",
-    "@testcontainers/postgresql": "12.1.0",
+    "@testcontainers/postgresql": "12.2.1",
     "@types/pg": "8.23.1",
-    "pg": "8.23.0",
-    "vitest": "5.0.1"
+    "pg": "8.23.1",
+    "vitest": "5.0.5"
   }
 }
